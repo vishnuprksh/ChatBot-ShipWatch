@@ -1,3 +1,8 @@
+"""
+ChatBot-ShipWatch: A Streamlit application for maritime noon data entry
+with AI-powered contradiction detection and resolution.
+"""
+
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
@@ -23,6 +28,12 @@ model = genai.GenerativeModel('gemini-2.0-flash-lite')
 
 # --- 1. Dummy Data Generation ---
 def generate_dummy_data():
+    """
+    Generate sample noon data for demonstration purposes.
+    
+    Returns:
+        pd.DataFrame: DataFrame containing sample vessel noon reports
+    """
     data = []
     end_date = datetime.now().date()
     start_date = end_date - timedelta(days=60)
@@ -75,8 +86,20 @@ if 'latest_added_vessel' not in st.session_state:
 
 def check_for_contradiction(vessel_name, new_laden_ballast, new_report_type, df, lookback_rows=5):
     """
-    Rule-based contradiction check for Laden/Ballast status, considering Report Type and recent history.
-    Returns (is_contradiction, previous_status, reason)
+    Check for contradictions in Laden/Ballast status based on recent vessel history.
+    
+    Args:
+        vessel_name (str): Name of the vessel
+        new_laden_ballast (str): New Laden/Ballast status ('Laden' or 'Ballast')
+        new_report_type (str): Type of the new report
+        df (pd.DataFrame): Historical data DataFrame
+        lookback_rows (int): Number of recent entries to consider
+    
+    Returns:
+        tuple: (is_contradiction, previous_status, reason)
+            - is_contradiction (bool): Whether a contradiction was detected
+            - previous_status (str): The consistent previous status, if any
+            - reason (str): Explanation of the contradiction
     """
     vessel_df = df[df['Vessel_name'] == vessel_name].sort_values(by='Date', ascending=False)
     if len(vessel_df) < lookback_rows:
@@ -94,9 +117,16 @@ def check_for_contradiction(vessel_name, new_laden_ballast, new_report_type, df,
 
 def generate_chat_response(conversation_history, vessel_name, previous_status, new_status):
     """
-    Uses Gemini API to generate a response during the contradiction chat,
-    and attempts to interpret user intent for proceeding or correcting.
-    Returns a dictionary with 'action', 'corrected_status' (if applicable), and 'bot_response'.
+    Generate a chat response using Gemini AI to handle contradiction resolution.
+    
+    Args:
+        conversation_history (list): List of previous chat messages
+        vessel_name (str): Name of the vessel in question
+        previous_status (str): Previous consistent status
+        new_status (str): New proposed status
+    
+    Returns:
+        dict: Response containing 'action', 'corrected_status' (if applicable), and 'bot_response'
     """
     # Format conversation history for Gemini
     formatted_conversation = []
@@ -186,7 +216,12 @@ def generate_chat_response(conversation_history, vessel_name, previous_status, n
 
 
 def add_entry(new_entry_data):
-    """Appends a new entry to the DataFrame and sorts it."""
+    """
+    Add a new entry to the noon data DataFrame and reset session state.
+    
+    Args:
+        new_entry_data (dict): Dictionary containing the new entry data
+    """
     new_df_row = pd.DataFrame([new_entry_data])
     new_df_row['Date'] = pd.to_datetime(new_df_row['Date']).dt.date
     st.session_state.noon_data = pd.concat([st.session_state.noon_data, new_df_row], ignore_index=True)
